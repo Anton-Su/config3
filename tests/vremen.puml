@@ -1,0 +1,11 @@
+@startuml
+libxml2 --> zlib1g
+libxml2 --> libicu66
+libxml2 --> liblzma5
+libicu66 --> libc6
+libicu66 --> libgcc-s1
+liblzma5 --> libc6
+libc6 --> libgcc-s1
+libc6 --> libpthread
+zlib1g --> libc6
+@enduml
