@@ -22,27 +22,11 @@ def main(path_to_itog_file):
     input_thread.start()
     while not keyboard.is_pressed("ctrl+d"):
         time.sleep(0.1)
-    do_something(text)
+    parse(text)
 
 
-def do_something(text):
+def parse(text):
     print(text)
-    print(1111)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def write(path_to_itog_file, text):  # где-то уже в конце
