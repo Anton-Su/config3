@@ -1,16 +1,17 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import sys
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def main(path_to_itog_file):
+    pass
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+
+if __name__ == "__main__":
+    # # if len(sys.argv) != 2:
+    # #     print("Аргументы указаны неверно")
+    # #     exit()
+    # path_to_itog_file = sys.argv[1]
+    path_to_itog_file = ''
+    main(path_to_itog_file)
