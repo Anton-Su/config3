@@ -7,7 +7,8 @@ import threading
 
 def read_input(text):
     for line in sys.stdin:
-        text.append(line)
+        if line.strip():
+            text.append(line)
         time.sleep(0.1)
 
 
@@ -26,7 +27,7 @@ def main(path_to_itog_file):
 
 def do_something(text):
     print(text)
-    pass
+    print(1111)
 
 
 
