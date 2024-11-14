@@ -8,7 +8,7 @@ import threading
 def read_input(text):
     for line in sys.stdin:
         if line.strip():
-            text.append(line)
+            text.append(line.strip())
         time.sleep(0.1)
 
 
