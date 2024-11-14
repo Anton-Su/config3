@@ -1,13 +1,31 @@
 import sys
 import os
+import keyboard
+import time
+import threading
+
+
+def read_input(text):
+    for line in sys.stdin:
+        text.append(line)
+        time.sleep(0.1)
 
 
 def main(path_to_itog_file):
     directory = os.path.dirname(path_to_itog_file)
     if not os.path.exists(directory) or not os.path.isdir(directory):
         return
-    with open(path_to_itog_file, mode="w") as f:
-        f.write("12331")
+    text = []
+    input_thread = threading.Thread(target=read_input, args=(text,))
+    input_thread.daemon = True
+    input_thread.start()
+    while not keyboard.is_pressed("ctrl+d"):
+        time.sleep(0.1)
+    do_something(text)
+
+
+def do_something(text):
+    print(text)
     pass
 
 
@@ -15,6 +33,20 @@ def main(path_to_itog_file):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+def write(path_to_itog_file, text):  # где-то уже в конце
+    with open(path_to_itog_file, mode="w") as f:
+        f.write(text)
 
 
 if __name__ == "__main__":
