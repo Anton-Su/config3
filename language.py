@@ -26,7 +26,9 @@ def main(path_to_itog_file):
 
 
 def parse(text):
-    print(text)
+    for i in text:
+        for symbol in i:
+            print(symbol)
 
 
 def write(path_to_itog_file, text):  # где-то уже в конце
