@@ -58,7 +58,7 @@ def parse(text):
         if re.fullmatch(".+\s?=", line):
             print("Empty value")
             break
-        if re.fullmatch("[\w-][_a-zA-Z0-9]*(\s*\"?\.\s*\"?[_a-zA-Z0-9]+)*\s*=\s*[^=]+", line):  # объявление переменной
+        if re.fullmatch(r"[\w\"'_-][_a-zA-Z0-9\"'_-]*(\s*\"?\.\s*\"?[_a-zA-Z0-9\"'_-]+)*\s*=\s*[^=]+", line):  # объявление переменной
             name, key = line.split("=")
             while " " in name:
                 name = name.replace(" ", "")
