@@ -28,21 +28,44 @@ def main(path_to_itog_file):
 
 def parse(text):
     dict = {}
+    itog_spisok = []
     for line in text:
-        line = line.strip()  # учебный язык не позволяет заглавную первую
+        line = line.strip()
+        commentary = ''
+        if len(line) == 0:
+            continue
+        index = 0
+        while line.find("#", index, len(line) - 1) != -1:
+            kavishi_count = 0
+            if ((line.find("#", index, len(line) - 1) < line.find('"', index, len(line) - 1)
+                 or line.find('"', index, len(line) - 1) == -1) or (
+                        line.find("#", index, len(line) - 1) < line.find("'", index, len(line) - 1)
+                        or line.find("'", index, len(line) - 1) == -1)) and kavishi_count % 2 == 0:  # остальное коммент
+                commentary = line[line.find("#", index, len(line) - 1):]
+                line = line[:line.find("#", index, len(line) - 1)]
+                break
+            else:
+                if line.find('"', index + 1, len(line) - 1) == -1 or line.find("'", index + 1, len(line) - 1):
+                    index = index + 1
+                else:
+                    index = min(line.find("'", index + 1, len(line) - 1), line.find('"', index + 1, len(line) - 1))
+                    kavishi_count += 1
+        print(line)
+        print(commentary)
         if re.fullmatch("\S+\.\s*=\s*\S+", line):
             print("Empty bare keys are not allowed")
             break
         if re.fullmatch(".+\s?=", line):
             print("Empty value")
             break
-        if re.fullmatch("[\w][_a-zA-Z0-9]*(\s*\"?\.\s*\"?[_a-zA-Z0-9]+)*\s*=\s*[^=]+", line):  # объявление переменной
+        if re.fullmatch("[\w-][_a-zA-Z0-9]*(\s*\"?\.\s*\"?[_a-zA-Z0-9]+)*\s*=\s*[^=]+", line):  # объявление переменной
             name, key = line.split("=")
             while " " in name:
                 name = name.replace(" ", "")
             key = key.strip()
             print(name)
             print(key)
+
             if key in dict:
                 print("Can't redefine existing key")
                 break
