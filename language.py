@@ -43,20 +43,20 @@ def parse(text):
     def parse_array(value):
         value = value.strip()[1:-1]
         elements = []
-        nested_level = 0
-        buffer = ""
+        level = 0
+        cont = ""
         for char in value:
             if char == "[":
-                nested_level += 1
+                level += 1
             elif char == "]":
-                nested_level -= 1
-            if char == "," and nested_level == 0:
-                elements.append(buffer.strip())
-                buffer = ""
+                level -= 1
+            if char == "," and level == 0:
+                elements.append(cont.strip())
+                cont = ""
             else:
-                buffer += char
-        if buffer:
-            elements.append(buffer.strip())
+                cont += char
+        if cont:
+            elements.append(cont.strip())
         parsed_elements = []
         for element in elements:
             if re.fullmatch(stroka, element):  # Строки
@@ -96,6 +96,9 @@ def parse(text):
             continue
         print("Комментарий:", commentary)
         if line.startswith("[") and line.endswith("]"):
+            if not (line.count("[") == 1 and line.count("]") == 1 and line.find("]") != len(line) - 1):
+                print("too many operations")
+                return
             table_name = line[1:-1].strip()
             if not table_name:
                 print("INVALID TABLE NAME")
