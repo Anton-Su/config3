@@ -177,7 +177,7 @@ def write(path_to_itog_file, text, commentaries):  # где-то уже в ко�
     with open(path_to_itog_file, mode="w", encoding="utf-16") as f:
         f.write("|#\n")
         for i in commentaries:
-            f.write(i + "\n")
+            f.write(i.strip() + "\n")
         beautiful = str(pformat(text))
         f.write("#|\n")
         f.write("var result := " + beautiful.replace(": ", " = ").replace("'", "").replace("[", "(").replace("]", ")"))
