@@ -68,16 +68,18 @@ def parse(text):
     special_values = {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}
     stroka = r'^".*"$'
     array_pattern = r'^\[.*\]$'
-    base = r"^[\w\"'_-][\w\"'_.-]*\s*=\s*.+"
+    table_name_pattern = r"^\s*\[[\w\"'_.-]+\]\s*$"
+    base = r"^[\w\"'_-][\w\"'_.-]*[\w\"'_-]\s*=\s*.+"
     parsed_data = {"Root": {}}  # Инициализируем с таблицей по умолчанию 'Root'
     current_table = parsed_data["Root"]  # По умолчанию используем таблицу 'Root'
     commentary_massiv = []
     error_perechod = False
+    defined_tables = set()
     for line in text:
         line = line.strip()
         commentary = ''
         index = 0
-        while line.find("#", index, len(line) - 1) != -1:
+        while line.find("#", index, len(line) - 1) != -1:  # кавычки и комментарии
             kavishi_count = 0
             if ((line.find("#", index, len(line) - 1) < line.find('"', index, len(line) - 1)
                  or line.find('"', index, len(line) - 1) == -1) or (
@@ -96,22 +98,24 @@ def parse(text):
             commentary_massiv.append(commentary)
         if len(line) == 0:
             continue
-        if line.startswith("[") and line.endswith("]"):
-            table_name = line[1:-1].strip()
+        if re.fullmatch(table_name_pattern, line):
+            table_name = line.strip()[1:-1]
             if not table_name:
                 print("INVALID TABLE NAME")
                 return
-            keys = table_name.split(".")
+            keys = table_name.split(".")  # Вложенные таблицы
             target = parsed_data
             for key in keys:
                 if key not in target:
-                    if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", key):
-                        error_perechod = True
                     target[key] = {}
                 elif not isinstance(target[key], dict):
                     print(f"INVALID REDEFINITION OF TABLE '{key}'")
                     return
                 target = target[key]
+            if table_name in defined_tables: # Проверяем, не была ли таблица уже объявлена ранее
+                print(f"INVALID REDEFINITION OF TABLE '{table_name}'")
+                return
+            defined_tables.add(table_name)
             current_table = target
             continue
         if re.fullmatch(base, line):
@@ -133,7 +137,7 @@ def parse(text):
             if final_key in target:
                 print(f"Key '{final_key}' already exists")
                 return
-            if re.fullmatch(stroka, value): # обр.значения
+            if re.fullmatch(stroka, value): # обрабатываем.значения
                 target[final_key] = value.strip('"')
                 error_perechod = True
             elif value in special_values:
@@ -189,7 +193,7 @@ def write(path_to_itog_file, text, commentaries):  # где-то уже в ко�
             f.write(i.strip() + "\n")
         beautiful = str(pformat(text))
         f.write("#|\n")
-        f.write("var result := " + beautiful.replace(": ", " = ").replace("'", "").replace("[", "(").replace("]", ")"))
+        f.write("var result := " + beautiful.replace(": ", " = ").replace("[", "(").replace("]", ")"))
 
 
 if __name__ == "__main__":
