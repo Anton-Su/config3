@@ -13,9 +13,6 @@ def read_input(text):
         time.sleep(0.1)
 
 
-
-
-
 def parse_array(value):
     value = value.strip()[1:-1]  # минус внешние квадратные скобки
     elements = []
@@ -186,5 +183,5 @@ if __name__ == "__main__":
          print("Аргументы указаны неверно")
          exit()
      path_to_itog_file = sys.argv[1]
-     # path_to_itog_file = r'C:\Users\Antua\PycharmProjects\config3\testfile.txt'
+
      main(path_to_itog_file)
