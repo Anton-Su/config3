@@ -148,7 +148,7 @@ def parse(text):
                 target[final_key] = value
                 error_perechod = True
             elif re.fullmatch(array_pattern, value):
-                if parsed_array(value) is None:
+                if parse_array(value) is None:
                     return
                 parsed_array, error = parse_array(value)
                 target[final_key] = parsed_array
