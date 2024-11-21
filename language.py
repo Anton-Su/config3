@@ -1,5 +1,6 @@
 import sys
 import os
+from pprint import pformat
 import keyboard
 import time
 import threading
@@ -177,8 +178,9 @@ def write(path_to_itog_file, text, commentaries):  # где-то уже в ко�
         f.write("|#\n")
         for i in commentaries:
             f.write(i + "\n")
+        beautiful = str(pformat(text))
         f.write("#|\n")
-        f.write("var result := " + str(text).replace(": ", " = ").replace("'", "").replace("[", "(").replace("]", ")"))
+        f.write("var result := " + beautiful.replace(": ", " = ").replace("'", "").replace("[", "(").replace("]", ")"))
 
 
 if __name__ == "__main__":
