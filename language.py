@@ -15,6 +15,7 @@ def read_input(text):
 
 
 def parse_array(value):
+    error = False
     value = value.strip()[1:-1]  # минус внешние квадратные скобки
     elements = []
     cont = ""
@@ -37,8 +38,10 @@ def parse_array(value):
         if re.fullmatch(r'^".*"$', element):  # Строки
             parsed_value = element.strip('"')
             parsed_elements.append(parsed_value)
+            error = True
         elif element in {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}:  # Специальные значения
             parsed_elements.append(float(element.replace("+", "")))
+            error = True
         elif re.fullmatch(r"^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$", element):  # Числа (целые и с плавающей запятой)
             if '.' in element or 'e' in element.lower():  # Число с плавающей запятой
                 parsed_elements.append(float(element))
@@ -46,13 +49,14 @@ def parse_array(value):
                 parsed_elements.append(int(element))
         elif element in ["true", "false"]:  # Булевы значения
             parsed_elements.append(element == "true")
+            error = True
         elif re.fullmatch(r'^\[.*\]$', element):  # Вложенные массивы
             parsed_value = parse_array(element)
             parsed_elements.append(parsed_value)
         else:
             print(f"INVALID ELEMENT IN ARRAY: {element}")
             return None
-    return parsed_elements
+    return parsed_elements, error
 
 
 def parse(text):
@@ -66,7 +70,6 @@ def parse(text):
     array_pattern = r'^\[.*\]$'
     base = r"^[\w\"'_-][\w\"'_.-]*\s*=\s*.+"
     parsed_data = {"Root": {}}  # Инициализируем с таблицей по умолчанию 'Root'
-    defined_tables = set()
     current_table = parsed_data["Root"]  # По умолчанию используем таблицу 'Root'
     commentary_massiv = []
     error_perechod = False
@@ -130,21 +133,27 @@ def parse(text):
             if final_key in target:
                 print(f"Key '{final_key}' already exists")
                 return
-            if re.fullmatch(stroka, value):
+            if re.fullmatch(stroka, value): # обр.значения
                 target[final_key] = value.strip('"')
+                error_perechod = True
             elif value in special_values:
                 target[final_key] = float(value.replace("+", ""))
+                error_perechod = True
             elif re.fullmatch(digit, value):
                 target[final_key] = float(value) if '.' in value or 'e' in value.lower() else int(value)
             elif value in ["true", "false"]:
                 target[final_key] = value == "true"
+                error_perechod = True
             elif re.fullmatch(date_time_sm, value) or re.fullmatch(date_time, value) or re.fullmatch(date, value) or re.fullmatch(time, value):
                 target[final_key] = value
+                error_perechod = True
             elif re.fullmatch(array_pattern, value):
-                parsed_array = parse_array(value)
-                if parsed_array is None:
+                if parsed_array(value) is None:
                     return
+                parsed_array, error = parse_array(value)
                 target[final_key] = parsed_array
+                if error:
+                    error_perechod = error
             else:
                 print(f"INVALID VALUE FOR KEY '{name}'")
                 return
