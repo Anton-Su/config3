@@ -64,9 +64,9 @@ def parse(text):
     stroka = r'^".*"$'
     array_pattern = r'^\[.*\]$'
     base = r"^[\w\"'_-][\w\"'_.-]*\s*=\s*.+"
-    parsed_data = {}
+    parsed_data = {"Root": {}}  # Инициализируем с таблицей по умолчанию 'Root'
     defined_tables = set()
-    current_table = None
+    current_table = parsed_data["Root"]  # По умолчанию используем таблицу 'Root'
     commentary_massiv = []
     error_perechod = False
     for line in text:
@@ -93,30 +93,33 @@ def parse(text):
         if len(line) == 0:
             continue
         if line.startswith("[") and line.endswith("]"):
-            if not (line.count("[") == 1 and line.count("]") == 1 and line.find("]") == len(line) - 1):
-                print("too many operations")
-                return
             table_name = line[1:-1].strip()
             if not table_name:
                 print("INVALID TABLE NAME")
                 return
-            if table_name in defined_tables:
-                print(f"Table '{table_name}' already defined")
-                return
-            defined_tables.add(table_name)
-            parsed_data[table_name] = {}
-            current_table = parsed_data[table_name]
+            keys = table_name.split(".")
+            target = parsed_data
+            for key in keys:
+                if key not in target:
+                    if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", key):
+                        error_perechod = True
+                    target[key] = {}
+                elif not isinstance(target[key], dict):
+                    print(f"INVALID REDEFINITION OF TABLE '{key}'")
+                    return
+                target = target[key]
+            current_table = target
             continue
         if re.fullmatch(base, line):
             name, value = line.split("=", 1)
-            if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", name):
-                error_perechod = True
             name = name.strip()
             value = value.strip()
             keys = name.split(".")
             target = current_table if current_table is not None else parsed_data
             for key in keys[:-1]:
                 if key not in target:
+                    if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", key):
+                        error_perechod = True
                     target[key] = {}
                 elif not isinstance(target[key], dict):
                     print(f"INVALID REDEFINITION OF KEY '{key}'")
@@ -170,12 +173,12 @@ def main(path_to_itog_file):
 
 
 def write(path_to_itog_file, text, commentaries):  # где-то уже в конце
-    with open(path_to_itog_file, mode="w") as f:
+    with open(path_to_itog_file, mode="w", encoding="utf-16") as f:
         f.write("|#\n")
         for i in commentaries:
             f.write(i + "\n")
         f.write("#|\n")
-        f.write("var top_table := " + str(text).replace(": ", " = ").replace("'", "").replace("[", "(").replace("]", ")"))
+        f.write("var result := " + str(text).replace(": ", " = ").replace("'", "").replace("[", "(").replace("]", ")"))
 
 
 if __name__ == "__main__":
@@ -183,5 +186,4 @@ if __name__ == "__main__":
          print("Аргументы указаны неверно")
          exit()
      path_to_itog_file = sys.argv[1]
-
      main(path_to_itog_file)

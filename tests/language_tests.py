@@ -25,10 +25,9 @@ class Random(TestCase):
                                                                                                          'true',
                    'ports = [8000, 8001, 8002]', 'data = [[1, 2, 3], ["a", "b", "c"], [true, false, true]]']
 
-        self.assertEqual(language.parse(example), ({'database': {'data': [[1, 2, 3], ['a', 'b', 'c'], [True, False, True]],
-               'enabled': True, 'ports': [8000, 8001, 8002]}, 'owner': {'dob': '1979-05-27T07:32:00Z', 'name': 'Tom Preston-Werner'}}, [], True))
+        self.assertEqual(language.parse(example), (({'Root': {}, 'database': {'data': [[1, 2, 3], ['a', 'b', 'c'], [True, False, True]],
+               'enabled': True, 'ports': [8000, 8001, 8002]}, 'owner': {'dob': '1979-05-27T07:32:00Z', 'name': 'Tom Preston-Werner'}}, [], True)))
 
     def test_parse_2(self):  # неправильный toml
         example = ['[owner]', 'name = "Alice"', '[owner]', 'name = "Bob"']
         self.assertEqual(language.parse(example), None)
-
