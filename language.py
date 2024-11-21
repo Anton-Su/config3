@@ -68,7 +68,7 @@ def parse(text):
     special_values = {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}
     stroka = r'^".*"$'
     array_pattern = r'^\[.*\]$'
-    table_name_pattern = r"^\s*\[[\w\"'_.-]+\]\s*$"
+    table_name_pattern = r"^\s*\[[^\s\[\].]+(\s*\.[^\s\[\].]+)*\]\s*$"
     base = r"^[\w\"'_-][\w\"'_.-]*\s*=\s*.+"
     parsed_data = {"Root": {}}  # Инициализируем с таблицей по умолчанию 'Root'
     current_table = parsed_data["Root"]  # По умолчанию используем таблицу 'Root'
