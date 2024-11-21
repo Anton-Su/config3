@@ -13,17 +13,7 @@ def read_input(text):
         time.sleep(0.1)
 
 
-def main(path_to_itog_file):
-    directory = os.path.dirname(path_to_itog_file)
-    if not os.path.exists(directory) or not os.path.isdir(directory):
-        return
-    text = []
-    input_thread = threading.Thread(target=read_input, args=(text,))
-    input_thread.daemon = True
-    input_thread.start()
-    while not keyboard.is_pressed("ctrl+d"):
-        time.sleep(0.1)
-    parse(text)
+
 
 
 def parse_array(value):
@@ -80,7 +70,7 @@ def parse(text):
     parsed_data = {}
     defined_tables = set()
     current_table = None
-
+    commentary_massiv = []
     for line in text:
         line = line.strip()
         commentary = ''
@@ -91,7 +81,7 @@ def parse(text):
                  or line.find('"', index, len(line) - 1) == -1) or (
                         line.find("#", index, len(line) - 1) < line.find("'", index, len(line) - 1)
                         or line.find("'", index, len(line) - 1) == -1)) and kavishi_count % 2 == 0:
-                commentary = line[line.find("#", index, len(line) - 1):]
+                commentary = line[line.find("#", index, len(line) - 1) + 1:]
                 line = line[:line.find("#", index, len(line) - 1)].strip()
                 break
             else:
@@ -100,9 +90,10 @@ def parse(text):
                 else:
                     index = min(line.find("'", index + 1, len(line) - 1), line.find('"', index + 1, len(line) - 1))
                     kavishi_count += 1
+        if commentary:
+            commentary_massiv.append(commentary)
         if len(line) == 0:
             continue
-        print("Комментарий:", commentary)
         if line.startswith("[") and line.endswith("]"):
             if not (line.count("[") == 1 and line.count("]") == 1 and line.find("]") == len(line) - 1):
                 print("too many operations")
@@ -156,12 +147,34 @@ def parse(text):
             continue
         print("INVALID LINE:", line)
         return
-    print(parsed_data)
-    return parsed_data
+    return parsed_data, commentary_massiv
 
-def write(path_to_itog_file, text):  # где-то уже в конце
+
+def main(path_to_itog_file):
+    directory = os.path.dirname(path_to_itog_file)
+    if not os.path.exists(directory) or not os.path.isdir(directory):
+        return
+    text = []
+    input_thread = threading.Thread(target=read_input, args=(text,))
+    input_thread.daemon = True
+    input_thread.start()
+    while not keyboard.is_pressed("ctrl+d"):
+        time.sleep(0.1)
+    if parse(text):
+        dict, commentaries = parse(text)
+        print(dict)
+        print(commentaries)
+        print("файл toml верный")
+        write(path_to_itog_file, dict, commentaries)
+
+
+def write(path_to_itog_file, text, commentaries):  # где-то уже в конце
     with open(path_to_itog_file, mode="w") as f:
-        f.write(text)
+        f.write("|#\n")
+        for i in commentaries:
+            f.write(i + "\n")
+        f.write("#|\n")
+        #f.write(text)
 
 
 if __name__ == "__main__":
