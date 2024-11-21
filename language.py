@@ -69,7 +69,7 @@ def parse(text):
     stroka = r'^".*"$'
     array_pattern = r'^\[.*\]$'
     table_name_pattern = r"^\s*\[[\w\"'_.-]+\]\s*$"
-    base = r"^[\w\"'_-][\w\"'_.-]*[\w\"'_-]\s*=\s*.+"
+    base = r"^[\w\"'_-][\w\"'_.-]*\s*=\s*.+"
     parsed_data = {"Root": {}}  # Инициализируем с таблицей по умолчанию 'Root'
     current_table = parsed_data["Root"]  # По умолчанию используем таблицу 'Root'
     commentary_massiv = []
@@ -108,13 +108,17 @@ def parse(text):
             for key in keys:
                 if key not in target:
                     target[key] = {}
+                    if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", key):
+                        error_perechod = True
                 elif not isinstance(target[key], dict):
                     print(f"INVALID REDEFINITION OF TABLE '{key}'")
                     return
                 target = target[key]
-            if table_name in defined_tables: # Проверяем, не была ли таблица уже объявлена ранее
+            if table_name in defined_tables:  # Проверяем, не была ли таблица уже объявлена ранее
                 print(f"INVALID REDEFINITION OF TABLE '{table_name}'")
                 return
+            if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", table_name):
+                error_perechod = True
             defined_tables.add(table_name)
             current_table = target
             continue
@@ -135,8 +139,10 @@ def parse(text):
                 target = target[key]
             final_key = keys[-1]
             if final_key in target:
-                print(f"Key '{final_key}' already exists")
+                print(f"INVALID REDEFINITION OF KEY '{final_key}'")
                 return
+            if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", final_key):
+                error_perechod = True
             if re.fullmatch(stroka, value): # обрабатываем.значения
                 target[final_key] = value.strip('"')
                 error_perechod = True
