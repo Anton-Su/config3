@@ -117,7 +117,7 @@ def parse(text):
             if table_name in defined_tables:  # Проверяем, не была ли таблица уже объявлена ранее
                 print(f"INVALID REDEFINITION OF TABLE '{table_name}'")
                 return
-            if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", table_name):
+            if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", keys[-1]):
                 error_perechod = True
             defined_tables.add(table_name)
             current_table = target
@@ -143,7 +143,7 @@ def parse(text):
                 return
             if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", final_key):
                 error_perechod = True
-            if re.fullmatch(stroka, value): # обрабатываем.значения
+            if re.fullmatch(stroka, value):  # обрабатываем.значения
                 target[final_key] = value.strip('"')
                 error_perechod = True
             elif value in special_values:
@@ -154,7 +154,9 @@ def parse(text):
             elif value in ["true", "false"]:
                 target[final_key] = value == "true"
                 error_perechod = True
-            elif re.fullmatch(date_time_sm, value) or re.fullmatch(date_time, value) or re.fullmatch(date, value) or re.fullmatch(time, value):
+            elif re.fullmatch(date_time_sm, value) or re.fullmatch(date_time, value) or re.fullmatch(date,
+                                                                                                     value) or re.fullmatch(
+                    time, value):
                 target[final_key] = value
                 error_perechod = True
             elif re.fullmatch(array_pattern, value):
@@ -187,12 +189,12 @@ def main(path_to_itog_file):
         dict, commentaries, error = parse(text)
         print("файл toml верный")
         if error:
-           print("ошибка записи, конвертирование невозможно")
-           return
+            print("ошибка записи, конвертирование невозможно")
+            return
         write(path_to_itog_file, dict, commentaries)
 
 
-def write(path_to_itog_file, text, commentaries):  # где-то уже в конце
+def write(path_to_itog_file, text, commentaries):
     with open(path_to_itog_file, mode="w", encoding="utf-16") as f:
         f.write("|#\n")
         for i in commentaries:
@@ -203,8 +205,8 @@ def write(path_to_itog_file, text, commentaries):  # где-то уже в ко�
 
 
 if __name__ == "__main__":
-     if len(sys.argv) != 2:
-         print("Аргументы указаны неверно")
-         exit()
-     path_to_itog_file = sys.argv[1]
-     main(path_to_itog_file)
+    if len(sys.argv) != 2:
+        print("Аргументы указаны неверно")
+        exit()
+    path_to_itog_file = sys.argv[1]
+    main(path_to_itog_file)
