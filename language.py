@@ -71,6 +71,7 @@ def parse(text):
     defined_tables = set()
     current_table = None
     commentary_massiv = []
+    error_perechod = False
     for line in text:
         line = line.strip()
         commentary = ''
@@ -111,6 +112,8 @@ def parse(text):
             continue
         if re.fullmatch(base, line):
             name, value = line.split("=", 1)
+            if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", name):
+                error_perechod = True
             name = name.strip()
             value = value.strip()
             keys = name.split(".")
@@ -147,7 +150,7 @@ def parse(text):
             continue
         print("INVALID LINE:", line)
         return
-    return parsed_data, commentary_massiv
+    return parsed_data, commentary_massiv, error_perechod
 
 
 def main(path_to_itog_file):
@@ -161,10 +164,11 @@ def main(path_to_itog_file):
     while not keyboard.is_pressed("ctrl+d"):
         time.sleep(0.1)
     if parse(text):
-        dict, commentaries = parse(text)
-        print(dict)
-        print(commentaries)
+        dict, commentaries, error = parse(text)
         print("файл toml верный")
+        if error:
+           print("ошибка записи, конвертирование невозможно")
+           return
         write(path_to_itog_file, dict, commentaries)
 
 
@@ -174,13 +178,13 @@ def write(path_to_itog_file, text, commentaries):  # где-то уже в ко�
         for i in commentaries:
             f.write(i + "\n")
         f.write("#|\n")
-        #f.write(text)
+        f.write("var top_table := " + str(text).replace(": ", " = ").replace("'", "").replace("[", "(").replace("]", ")"))
 
 
 if __name__ == "__main__":
-    # # if len(sys.argv) != 2:
-    # #     print("Аргументы указаны неверно")
-    # #     exit()
-    # path_to_itog_file = sys.argv[1]
-    path_to_itog_file = r'C:\Users\Antua\PycharmProjects\config3\testfile.txt'
-    main(path_to_itog_file)
+     if len(sys.argv) != 2:
+         print("Аргументы указаны неверно")
+         exit()
+     path_to_itog_file = sys.argv[1]
+     # path_to_itog_file = r'C:\Users\Antua\PycharmProjects\config3\testfile.txt'
+     main(path_to_itog_file)
