@@ -250,7 +250,7 @@ def main(path_to_itog_file):
             print(f"Ошибка перевода в учебный язык: {list(dict.fromkeys(error_perechod))} - конвертирование невозможно")
             return
         write_output(path_to_itog_file, dict, commentaries)
-        print("Успешно!")
+        print("Успеx!")
 
 
 if __name__ == "__main__":
