@@ -1,26 +1,28 @@
 import sys
 import os
-from pprint import pformat
-import keyboard
 import time
 import threading
 import re
+from pprint import pformat
+import keyboard
+
 
 error_perechod = False
+massiv_var = []
 
 
-def read_input(text):
+def read_input(buffer):
     for line in sys.stdin:
         if line.strip():
-            text.append(line.strip())
+            buffer.append(line.strip())
         time.sleep(0.1)
 
 
 def parse_array(value):
     global error_perechod
-    value = value.strip()[1:-1]  # минус внешние квадратные скобки
+    value = value.strip()[1:-1]  # Убираем внешние квадратные скобки
     elements = []
-    cont = ""
+    buffer = ""
     level = 0
     for char in value:
         if char == "[":
@@ -28,32 +30,32 @@ def parse_array(value):
         elif char == "]":
             level -= 1
         if char == "," and level == 0:
-            elements.append(cont.strip())
-            cont = ""
+            elements.append(buffer.strip())
+            buffer = ""
         else:
-            cont += char
-    if cont.strip():
-        elements.append(cont.strip())
+            buffer += char
+    if buffer.strip():
+        elements.append(buffer.strip())
     parsed_elements = []
     for element in elements:
         element = element.strip()
         if re.fullmatch(r'^".*"$', element):  # Строки
-            parsed_value = element.strip('"')
-            parsed_elements.append(parsed_value)
+            parsed_elements.append(element.strip('"'))
             error_perechod = True
         elif element in {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}:  # Специальные значения
             parsed_elements.append(float(element.replace("+", "")))
             error_perechod = True
-        elif re.fullmatch(r"^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$", element):  # Числа (целые и с плавающей запятой)
-            if '.' in element or 'e' in element.lower():  # Число с плавающей запятой
-                parsed_elements.append(float(element))
-            else:  # Целое число
-                parsed_elements.append(int(element))
+        elif re.fullmatch(r"^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$", element):  # Числа
+            parsed_elements.append(float(element) if '.' in element or 'e' in element.lower() else int(element))
         elif element in ["true", "false"]:  # Булевы значения
             parsed_elements.append(element == "true")
             error_perechod = True
         elif re.fullmatch(r'^\[.*\]$', element):  # Вложенные массивы
-            parsed_value = parse_array(element)
+            parsed_elements.append(parse_array(element))
+        elif re.fullmatch(r'^\{.*\}$', element):  # словарь
+            parsed_value = parse_dict(element)
+            if parsed_value is None:
+                return None
             parsed_elements.append(parsed_value)
         else:
             print(f"INVALID ELEMENT IN ARRAY: {element}")
@@ -61,152 +63,177 @@ def parse_array(value):
     return parsed_elements
 
 
-def parse(text):
+def parse_dict(value):
+    global massiv_var
     global error_perechod
-    date_time_sm = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|([+-])\d{2}:\d{2})$"
-    date_time = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z?$"
-    date = r"^\d{4}-\d{2}-\d{2}$"
-    time = r"^\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z?$"
-    digit = r"^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$"
-    special_values = {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}
-    stroka = r'^".*"$'
-    array_pattern = r'^\[.*\]$'
-    table_name_pattern = r"^\s*\[[^\s\[\].]+(\s*\.\s*[^\s\[\].]+)*\]\s*$"
-    base = r"^[\w\"'_-][\w\"'_.-]*\s*=\s*.+"
-    parsed_data = {"Root": {}}  # Инициализируем с таблицей по умолчанию 'Root'
-    current_table = parsed_data["Root"]  # По умолчанию используем таблицу 'Root'
-    commentary_massiv = []
+    if not value.startswith("{") or not value.endswith("}"):
+        print(f"INVALID DICTIONARY FORMAT: {value}")
+        return None
+    value = value.strip()[1:-1]  # Убираем внешние скобки
+    elements = []
+    buffer = ""
+    level = 0
+    for char in value:
+        if char == "[":
+            level += 1
+        elif char == "]":
+            level -= 1
+        if char == "," and level == 0:
+            elements.append(buffer.strip())
+            buffer = ""
+        else:
+            buffer += char
+    if buffer.strip():
+        elements.append(buffer.strip())
+    parsed_dict = {}
+    for element in elements:
+        if "=" not in element:
+            print(f"INVALID DICTIONARY ENTRY: {element}")
+            return None
+        key, val = map(str.strip, element.split("=", 1))
+        if not re.fullmatch(r"[_a-zA-Z][_a-zA-Z0-9]*", key):
+            print(f"INVALID DICT KEY: {key}")
+            return None
+        if re.fullmatch(r'^".*"$', val):  # Строка
+            parsed_value = val.strip('"')
+            error_perechod = False
+        elif val in {"true", "false"}:  # Булевы значения
+            parsed_value = val == "true"
+            error_perechod = False
+        elif re.fullmatch(r"^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$", val):  # Числа
+            parsed_value = f"![{key}]"
+            massiv_var.append("var " + key + " := " + str(float(val)) if '.' in val or 'e' in val.lower() else "var " + key + " := " + str(int(val)))
+        elif re.fullmatch(r'^\[.*\]$', val):  # Массив
+            parsed_value = parse_array(val)
+            if parsed_value is None:
+                return None
+            massiv_var.append("var " + key + " := " + parsed_value)
+            parsed_value = f"![{key}]"
+        elif re.fullmatch(r'^\{.*\}$', val):  # Вложенный словарь
+            parsed_value = parse_dict(val)
+            if parsed_value is None:
+                return None
+        else:
+            print(f"INVALID DICT VALUE: {val}")
+            return None
+        parsed_dict[key] = parsed_value
+    return parsed_dict
+
+
+def parse(lines):
+    global error_perechod
+    patterns = {
+        "datetime": r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|([+-]\d{2}:\d{2}))?$",
+        "date": r"^\d{4}-\d{2}-\d{2}$",
+        "time": r"^\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z?$",
+        "digit": r"^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$",
+        "string": r'^".*"$',
+        "array": r'^\[.*\]$',
+        "table": r"^\s*\[[^\s\[\].]+(\s*\.\s*[^\s\[\].]+)*\]\s*$",
+        "key_value": r"^[\w\"'_-][\w\"'_.-]*\s*=\s*.+",
+        "dictionary": r'^\{.*\}$',
+    }
+    parsed_data = {"Root": {}}
+    current_table = parsed_data["Root"]
     defined_tables = set()
-    for line in text:
+    commentaries = []
+    for line in lines:
         line = line.strip()
-        commentary = ''
-        index = 0
-        while line.find("#", index, len(line) - 1) != -1:  # кавычки и комментарии
-            kavishi_count = 0
-            if ((line.find("#", index, len(line) - 1) < line.find('"', index, len(line) - 1)
-                 or line.find('"', index, len(line) - 1) == -1) or (
-                        line.find("#", index, len(line) - 1) < line.find("'", index, len(line) - 1)
-                        or line.find("'", index, len(line) - 1) == -1)) and kavishi_count % 2 == 0:
-                commentary = line[line.find("#", index, len(line) - 1) + 1:]
-                line = line[:line.find("#", index, len(line) - 1)].strip()
-                break
-            else:
-                if line.find('"', index + 1, len(line) - 1) == -1 or line.find("'", index + 1, len(line) - 1):
-                    index = index + 1
-                else:
-                    index = min(line.find("'", index + 1, len(line) - 1), line.find('"', index + 1, len(line) - 1))
-                    kavishi_count += 1
-        if commentary:
-            commentary_massiv.append(commentary)
-        if len(line) == 0:
+        if "#" in line:
+            line, comment = line.split("#", 1)
+            commentaries.append(comment.strip())
+            line = line.strip()
+        if not line:
             continue
-        if re.fullmatch(table_name_pattern, line):
+        if re.fullmatch(patterns["table"], line):
             table_name = line.strip()[1:-1]
-            if not table_name:
-                print("INVALID TABLE NAME")
-                return
-            keys = table_name.split(".")  # Вложенные таблицы
-            target = parsed_data
+            keys = table_name.split(".")
+            current_table = parsed_data
             for key in keys:
-                if key not in target:
-                    target[key] = {}
-                    if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", key):
-                        error_perechod = True
-                elif not isinstance(target[key], dict):
-                    print(f"INVALID REDEFINITION OF TABLE '{key}'")
-                    return
-                target = target[key]
-            if table_name in defined_tables:  # Проверяем, не была ли таблица уже объявлена ранее
+                current_table = current_table.setdefault(key, {})
+            if table_name in defined_tables:
                 print(f"INVALID REDEFINITION OF TABLE '{table_name}'")
                 return
-            if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", keys[-1]):
-                error_perechod = True
             defined_tables.add(table_name)
-            current_table = target
             continue
-        if re.fullmatch(base, line):
-            name, value = line.split("=", 1)
-            name = name.strip()
-            value = value.strip()
-            keys = name.split(".")
-            target = current_table if current_table is not None else parsed_data
-            for key in keys[:-1]:
-                if key not in target:
-                    if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", key):
-                        error_perechod = True
-                    target[key] = {}
-                elif not isinstance(target[key], dict):
-                    print(f"INVALID REDEFINITION OF KEY '{key}'")
-                    return
-                target = target[key]
+        if re.fullmatch(patterns["key_value"], line):
+            key, value = map(str.strip, line.split("=", 1))
+            keys = key.split(".")
+            target = current_table
+            for k in keys[:-1]:
+                target = target.setdefault(k, {})
             final_key = keys[-1]
             if final_key in target:
                 print(f"INVALID REDEFINITION OF KEY '{final_key}'")
                 return
-            if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", final_key):
-                error_perechod = True
-            if re.fullmatch(stroka, value):  # обрабатываем.значения
+            if re.fullmatch(patterns["string"], value):
                 target[final_key] = value.strip('"')
                 error_perechod = True
-            elif value in special_values:
+            elif value in {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}:
                 target[final_key] = float(value.replace("+", ""))
                 error_perechod = True
-            elif re.fullmatch(digit, value):
+            elif re.fullmatch(patterns["digit"], value):
                 target[final_key] = float(value) if '.' in value or 'e' in value.lower() else int(value)
             elif value in ["true", "false"]:
                 target[final_key] = value == "true"
-                error_perechod = True
-            elif re.fullmatch(date_time_sm, value) or re.fullmatch(date_time, value) or re.fullmatch(date, value) or re.fullmatch(time, value):
+            elif re.fullmatch(patterns["datetime"], value) or re.fullmatch(patterns["date"], value) or re.fullmatch(patterns["time"], value):
                 target[final_key] = value
                 error_perechod = True
-            elif re.fullmatch(array_pattern, value):
+            elif re.fullmatch(patterns["array"], value):
                 parsed_array = parse_array(value)
                 if parsed_array is None:
                     return
                 target[final_key] = parsed_array
+            elif re.fullmatch(patterns["dictionary"], value):
+                parsed_dict = parse_dict(value)
+                if parsed_dict is None:
+                    return
+                target[final_key] = parsed_dict
             else:
-                print(f"INVALID VALUE FOR KEY '{name}'")
+                print(f"INVALID VALUE FOR KEY '{key}'")
                 return
             continue
-        print("INVALID LINE:", line)
+        print(f"INVALID LINE: {line}")
         return
-    return parsed_data, commentary_massiv
+    return parsed_data, commentaries
 
 
-def main(path_to_itog_file):
-    directory = os.path.dirname(path_to_itog_file)
-    if not os.path.exists(directory) or not os.path.isdir(directory):
+def write_output(path, data, commentaries):
+    with open(path, mode="w", encoding="utf-16") as f:
+        f.write("|#\n")
+        for comment in commentaries:
+            f.write(comment + "\n")
+        f.write("#|\n")
+        for var in massiv_var:
+            f.write(var + "\n")
+        f.write("{\n")
+        formatted = pformat(data).replace(": ", " = ").replace("[", "(").replace("]", ")")
+        f.write(formatted)
+        f.write("\n}")
+
+
+def main(output_path):
+    directory = os.path.dirname(output_path)
+    if not os.path.isdir(directory):
+        print("Invalid directory")
         return
-    text = []
-    input_thread = threading.Thread(target=read_input, args=(text,))
-    input_thread.daemon = True
+    lines = []
+    input_thread = threading.Thread(target=read_input, args=(lines,))
     input_thread.start()
     while not keyboard.is_pressed("ctrl+d"):
         time.sleep(0.1)
-    if parse(text):
-        dict, commentaries  = parse(text)
-        print("файл toml верный")
+    result = parse(lines)
+    if result:
+        parsed_data, commentaries = result
+        print("TOML файл корректен")
         if error_perechod:
-            print("ошибка записи, конвертирование невозможно")
+            print("Ошибка в значениях, конвертация невозможна")
             return
-        write(path_to_itog_file, dict, commentaries)
-
-
-def write(path_to_itog_file, text, commentaries):
-    with open(path_to_itog_file, mode="w", encoding="utf-16") as f:
-        f.write("|#\n")
-        for i in commentaries:
-            f.write(i.strip() + "\n")
-        beautiful = str(pformat(text))
-        f.write("#|\n")
-        f.write("{\n")
-        f.write(beautiful.replace(": ", " = ").replace("[", "(").replace("]", ")"))
-        f.write("\n}")
+        write_output(output_path, parsed_data, commentaries)
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Аргументы указаны неверно")
-        exit()
-    path_to_itog_file = sys.argv[1]
-    main(path_to_itog_file)
+        print("Неверные аргументы")
+        exit(1)
+    main(sys.argv[1])
