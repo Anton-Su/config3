@@ -223,8 +223,9 @@ def write_output(path, data, commentaries):
         for comment in commentaries:
             f.write(comment + "\n")
         f.write("#|\n")
-        for var in massiv_var:
+        for var in massiv_var[:len(massiv_var) // 2]:
             f.write(var + "\n")
+        f.write('\n')
         f.write("{\n")
         formatted = pformat(data).replace(": ", " = ").replace("[", "(").replace("]", ")")
         f.write(formatted)
