@@ -6,8 +6,7 @@ import re
 from pprint import pformat
 import keyboard
 
-
-error_perechod = False
+error_perechod = []
 massiv_var = []
 
 
@@ -15,12 +14,10 @@ def read_input(text):
     for line in sys.stdin:
         if line.strip():
             text.append(line.strip())
-        time.sleep(0.1)
 
 
 def parse_array(value):
-    global error_perechod
-    value = value.strip()[1:-1]  # Убираем внешние квадратные скобки
+    value = value.strip()[1:-1]
     elements = []
     buffer = ""
     level = 0
@@ -41,42 +38,42 @@ def parse_array(value):
         element = element.strip()
         if re.fullmatch(r'^".*"$', element):  # Строки
             parsed_elements.append(element.strip('"'))
-            error_perechod = True
-        elif element in {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}:  # Специальные значения
+            error_perechod.append("Value_stroka_error")
+        elif element in {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}:
             parsed_elements.append(float(element.replace("+", "")))
-            error_perechod = True
-        elif re.fullmatch(r"^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$", element):  # Числа
+            error_perechod.append("Value_special_elements")
+        elif re.fullmatch(r"^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$", element):
             parsed_elements.append(float(element) if '.' in element or 'e' in element.lower() else int(element))
-        elif element in ["true", "false"]:  # Булевы значения
+        elif element in ["true", "false"]:
             parsed_elements.append(element == "true")
-            error_perechod = True
+            error_perechod.append("Value_boolean_error")
         elif re.fullmatch(r'^\[.*\]$', element):  # Вложенные массивы
-            parsed_elements.append(parse_array(element))
+            result = parse_array(element)
+            if not result:
+                return
+            parsed_elements.append(result)
         elif re.fullmatch(r'^\{.*\}$', element):  # словарь
-            parsed_value = parse_dict(element)
+            example = dict()
+            parsed_value = parse_dict(element, example)
             if parsed_value is None:
-                return None
+                return
             parsed_elements.append(parsed_value)
         else:
             print(f"INVALID ELEMENT IN ARRAY: {element}")
-            return None
+            return
     return parsed_elements
 
 
-def parse_dict(value):
+def parse_dict(value, dict):
     global massiv_var
-    global error_perechod
-    if not value.startswith("{") or not value.endswith("}"):
-        print(f"INVALID DICTIONARY FORMAT: {value}")
-        return None
-    value = value.strip()[1:-1]  # Убираем внешние скобки
+    value = value.strip()[1:-1]
     elements = []
     buffer = ""
     level = 0
     for char in value:
-        if char == "[":
+        if char == "{":
             level += 1
-        elif char == "]":
+        elif char == "}":
             level -= 1
         if char == "," and level == 0:
             elements.append(buffer.strip())
@@ -85,43 +82,48 @@ def parse_dict(value):
             buffer += char
     if buffer.strip():
         elements.append(buffer.strip())
-    parsed_dict = {}
     for element in elements:
         if "=" not in element:
             print(f"INVALID DICTIONARY ENTRY: {element}")
-            return None
+            return
         key, val = map(str.strip, element.split("=", 1))
-        if not re.fullmatch(r"[_a-zA-Z][_a-zA-Z0-9]*", key):
+        if not re.fullmatch(r"^[\w\"'_-][\w\"'_.-]*\s*", key):
             print(f"INVALID DICT KEY: {key}")
-            return None
-        if re.fullmatch(r'^".*"$', val):  # Строка
+            return
+        if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", key):
+            error_perechod.append("Key is not TOML")
+        if re.fullmatch(r'^".*"$', val):
             parsed_value = val.strip('"')
-            error_perechod = False
-        elif val in {"true", "false"}:  # Булевы значения
+            error_perechod.append("Value_stroka_error")
+        elif val in {"true", "false"}:
             parsed_value = val == "true"
-            error_perechod = False
-        elif re.fullmatch(r"^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$", val):  # Числа
+            error_perechod.append("Value_boolean_error")
+        elif re.fullmatch(r"^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$", val):
             parsed_value = f"![{key}]"
             massiv_var.append("var " + key + " := " + str(float(val)) if '.' in val or 'e' in val.lower() else "var " + key + " := " + str(int(val)))
         elif re.fullmatch(r'^\[.*\]$', val):  # Массив
             parsed_value = parse_array(val)
             if parsed_value is None:
-                return None
-            massiv_var.append("var " + key + " := " + parsed_value)
+                return
+            massiv_var.append("var " + key + " := " + str(parsed_value))
             parsed_value = f"![{key}]"
         elif re.fullmatch(r'^\{.*\}$', val):  # Вложенный словарь
-            parsed_value = parse_dict(val)
-            if parsed_value is None:
-                return None
+            kusochek = dict[key] = {}
+            if not parse_dict(val, kusochek):
+                return
+            continue
         else:
             print(f"INVALID DICT VALUE: {val}")
-            return None
-        parsed_dict[key] = parsed_value
-    return parsed_dict
+            return
+        if key not in dict:
+            dict[key] = parsed_value
+        else:
+            print(f"INVALID REDEFINITION OF TABLE '{key}'")
+            return
+    return dict
 
 
 def parse(lines):
-    global error_perechod
     patterns = {
         "datetime": r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|([+-]\d{2}:\d{2}))?$",
         "date": r"^\d{4}-\d{2}-\d{2}$",
@@ -133,8 +135,8 @@ def parse(lines):
         "key_value": r"^[\w\"'_-][\w\"'_.-]*\s*=\s*.+",
         "dictionary": r'^\{.*\}$',
     }
-    parsed_data = {"Root": {}}
-    current_table = parsed_data["Root"]
+    dict = {"Root": {}}
+    current_table = dict["Root"]
     defined_tables = set()
     commentaries = []
     for line in lines:
@@ -163,7 +165,7 @@ def parse(lines):
         if re.fullmatch(patterns["table"], line):
             table_name = line.strip()[1:-1]
             keys = table_name.split(".")
-            current_table = parsed_data
+            current_table = dict
             for key in keys:
                 current_table = current_table.setdefault(key, {})
             if table_name in defined_tables:
@@ -173,44 +175,46 @@ def parse(lines):
             continue
         if re.fullmatch(patterns["key_value"], line):
             key, value = map(str.strip, line.split("=", 1))
-            keys = key.split(".")
             target = current_table
+            keys = key.split(".")
             for k in keys[:-1]:
+                if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", k):
+                    error_perechod.append("Key is not TOML")
                 target = target.setdefault(k, {})
             final_key = keys[-1]
+            if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", final_key):
+                error_perechod.append("Key is not TOML")
             if final_key in target:
                 print(f"INVALID REDEFINITION OF KEY '{final_key}'")
                 return
             if re.fullmatch(patterns["string"], value):
                 target[final_key] = value.strip('"')
-                error_perechod = True
+                error_perechod.append("Value_stroka_error")
             elif value in {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}:
                 target[final_key] = float(value.replace("+", ""))
-                error_perechod = True
+                error_perechod.append("Value_inf_error")
             elif re.fullmatch(patterns["digit"], value):
                 target[final_key] = float(value) if '.' in value or 'e' in value.lower() else int(value)
             elif value in ["true", "false"]:
                 target[final_key] = value == "true"
             elif re.fullmatch(patterns["datetime"], value) or re.fullmatch(patterns["date"], value) or re.fullmatch(patterns["time"], value):
                 target[final_key] = value
-                error_perechod = True
+                error_perechod.append("Value_date_time_error")
             elif re.fullmatch(patterns["array"], value):
                 parsed_array = parse_array(value)
-                if parsed_array is None:
+                if not parsed_array:
                     return
                 target[final_key] = parsed_array
             elif re.fullmatch(patterns["dictionary"], value):
-                parsed_dict = parse_dict(value)
-                if parsed_dict is None:
+                if not parse_dict(value, target):
                     return
-                target[final_key] = parsed_dict
             else:
                 print(f"INVALID VALUE FOR KEY '{key}'")
                 return
             continue
         print(f"INVALID LINE: {line}")
         return
-    return parsed_data, commentaries
+    return dict, commentaries
 
 
 def write_output(path, data, commentaries):
@@ -240,11 +244,12 @@ def main(path_to_itog_file):
     result = parse(text)
     if result:
         dict, commentaries = parse(text)
-        print("Файл toml верный")
-        if error_perechod:
-            print("ошибка записи (типа строчной заглавной буквы переменной), конвертирование невозможно")
+        print("Файл toml верный, перехожу к переводу в учебный язык")
+        if len(error_perechod) > 0:
+            print(f"Ошибка перевода в учебный язык: {list(dict.fromkeys(error_perechod))} - конвертирование невозможно")
             return
         write_output(path_to_itog_file, dict, commentaries)
+        print("Успешно!")
 
 
 if __name__ == "__main__":
