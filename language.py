@@ -11,10 +11,10 @@ error_perechod = False
 massiv_var = []
 
 
-def read_input(buffer):
+def read_input(text):
     for line in sys.stdin:
         if line.strip():
-            buffer.append(line.strip())
+            text.append(line.strip())
         time.sleep(0.1)
 
 
