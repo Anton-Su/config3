@@ -139,10 +139,25 @@ def parse(lines):
     commentaries = []
     for line in lines:
         line = line.strip()
-        if "#" in line:
-            line, comment = line.split("#", 1)
-            commentaries.append(comment.strip())
-            line = line.strip()
+        commentary = ''
+        index = 0
+        while line.find("#", index, len(line) - 1) != -1:  # кавычки и комментарии
+            kavishi_count = 0
+            if ((line.find("#", index, len(line) - 1) < line.find('"', index, len(line) - 1)
+                 or line.find('"', index, len(line) - 1) == -1) or (
+                        line.find("#", index, len(line) - 1) < line.find("'", index, len(line) - 1)
+                        or line.find("'", index, len(line) - 1) == -1)) and kavishi_count % 2 == 0:
+                commentary = line[line.find("#", index, len(line) - 1) + 1:]
+                line = line[:line.find("#", index, len(line) - 1)].strip()
+                break
+            else:
+                if line.find('"', index + 1, len(line) - 1) == -1 or line.find("'", index + 1, len(line) - 1):
+                    index = index + 1
+                else:
+                    index = min(line.find("'", index + 1, len(line) - 1), line.find('"', index + 1, len(line) - 1))
+                    kavishi_count += 1
+        if commentary:
+            commentaries.append(commentary)
         if not line:
             continue
         if re.fullmatch(patterns["table"], line):
@@ -230,6 +245,7 @@ def main(path_to_itog_file):
             print("ошибка записи (типа строчной заглавной буквы переменной), конвертирование невозможно")
             return
         write_output(path_to_itog_file, dict, commentaries)
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
