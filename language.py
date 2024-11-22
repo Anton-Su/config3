@@ -212,25 +212,24 @@ def write_output(path, data, commentaries):
         f.write("\n}")
 
 
-def main(output_path):
-    directory = os.path.dirname(output_path)
-    if not os.path.isdir(directory):
-        print("Invalid directory")
+def main(path_to_itog_file):
+    directory = os.path.dirname(path_to_itog_file)
+    if not os.path.exists(directory) or not os.path.isdir(directory):
         return
-    lines = []
-    input_thread = threading.Thread(target=read_input, args=(lines,))
+    text = []
+    input_thread = threading.Thread(target=read_input, args=(text,))
+    input_thread.daemon = True
     input_thread.start()
     while not keyboard.is_pressed("ctrl+d"):
         time.sleep(0.1)
-    result = parse(lines)
+    result = parse(text)
     if result:
-        parsed_data, commentaries = result
-        print("TOML файл корректен")
+        dict, commentaries = parse(text)
+        print("Файл toml верный")
         if error_perechod:
-            print("Ошибка в значениях, конвертация невозможна")
+            print("ошибка записи (типа строчной заглавной буквы переменной), конвертирование невозможно")
             return
-        write_output(output_path, parsed_data, commentaries)
-
+        write_output(path_to_itog_file, dict, commentaries)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
