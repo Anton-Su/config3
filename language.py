@@ -16,23 +16,36 @@ def read_input(text):
             text.append(line.strip())
 
 
-def parse_array(value):
+def prepare(value):
     value = value.strip()[1:-1]
     elements = []
     buffer = ""
-    level = 0
+    level_slovar = 0
+    level_massiv = 0
+    kavishi_count = 0
     for char in value:
-        if char == "[":
-            level += 1
-        elif char == "]":
-            level -= 1
-        if char == "," and level == 0:
+        if char == '"':
+            kavishi_count += 1
+        if char == "{" and kavishi_count % 2 == 0:
+            level_slovar += 1
+        elif char == "}" and kavishi_count % 2 == 0:
+            level_slovar -= 1
+        elif char == "[" and kavishi_count % 2 == 0:
+            level_massiv += 1
+        elif char == "]" and kavishi_count % 2 == 0:
+            level_massiv -= 1
+        if char == "," and level_slovar == 0 and level_massiv == 0 and kavishi_count % 2 == 0:
             elements.append(buffer.strip())
             buffer = ""
         else:
             buffer += char
     if buffer.strip():
         elements.append(buffer.strip())
+    return elements
+
+
+def parse_array(value):
+    elements = prepare(value)
     parsed_elements = []
     for element in elements:
         element = element.strip()
@@ -65,31 +78,12 @@ def parse_array(value):
 
 
 def parse_dict(value, dict):
-    global massiv_var
-    value = value.strip()[1:-1]
-    elements = []
-    buffer = ""
-    level = 0
-    for char in value:
-        if char == "{":
-            level += 1
-        elif char == "}":
-            level -= 1
-        if char == "," and level == 0:
-            elements.append(buffer.strip())
-            buffer = ""
-        else:
-            buffer += char
-    if buffer.strip():
-        elements.append(buffer.strip())
+    elements = prepare(value)
     for element in elements:
-        if "=" not in element:
-            print(f"INVALID DICTIONARY ENTRY: {element}")
+        if not re.fullmatch(r"^[\w\"'_-][\w\"'_.-]*\s*=\s*.+", element):
+            print(f"INVALID DICT: {element}")
             return
         key, val = map(str.strip, element.split("=", 1))
-        if not re.fullmatch(r"^[\w\"'_-][\w\"'_.-]*\s*", key):
-            print(f"INVALID DICT KEY: {key}")
-            return
         if not re.fullmatch(r"[_A-Z][_a-zA-Z0-9]*", key):
             error_perechod.append("Key is not TOML")
         if re.fullmatch(r'^".*"$', val):
