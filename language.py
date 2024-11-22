@@ -1,21 +1,11 @@
 import sys
 import os
-import time
-import threading
 import re
 from pprint import pformat
-import keyboard
 
 
 error_perechod = False
 massiv_var = []
-
-
-def read_input(text):
-    for line in sys.stdin:
-        if line.strip():
-            text.append(line.strip())
-        time.sleep(0.1)
 
 
 def parse_array(value):
@@ -121,6 +111,7 @@ def parse_dict(value):
 
 
 def parse(lines):
+    print(111111111111)
     global error_perechod
     patterns = {
         "datetime": r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|([+-]\d{2}:\d{2}))?$",
@@ -222,7 +213,7 @@ def write_output(path, data, commentaries):
         for var in massiv_var:
             f.write(var + "\n")
         f.write("{\n")
-        formatted = pformat(data).replace(": ", " = ").replace("[", "(").replace("]", ")")
+        formatted = pformat(data).replace(": ", " = ").replace("[", "(").replace("]", ")").replace("'", "").replace("'", "")
         f.write(formatted)
         f.write("\n}")
 
@@ -232,19 +223,18 @@ def main(path_to_itog_file):
     if not os.path.exists(directory) or not os.path.isdir(directory):
         return
     text = []
-    input_thread = threading.Thread(target=read_input, args=(text,))
-    input_thread.daemon = True
-    input_thread.start()
-    while not keyboard.is_pressed("ctrl+d"):
-        time.sleep(0.1)
-    result = parse(text)
-    if result:
-        dict, commentaries = parse(text)
-        print("Файл toml верный")
-        if error_perechod:
-            print("ошибка записи (типа строчной заглавной буквы переменной), конвертирование невозможно")
-            return
-        write_output(path_to_itog_file, dict, commentaries)
+    try:
+        for line in sys.stdin:
+            text.append(line.strip())
+    except EOFError:
+        result = parse(text)
+        if result:
+            dict, commentaries = parse(text)
+            print("Файл toml верный")
+            if error_perechod:
+                print("ошибка записи (типа строчной заглавной буквы переменной), конвертирование невозможно")
+                return
+            write_output(path_to_itog_file, dict, commentaries)
 
 
 if __name__ == "__main__":
