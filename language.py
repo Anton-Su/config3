@@ -6,6 +6,8 @@ import time
 import threading
 import re
 
+error_perechod = False
+
 
 def read_input(text):
     for line in sys.stdin:
@@ -15,7 +17,7 @@ def read_input(text):
 
 
 def parse_array(value):
-    error = False
+    global error_perechod
     value = value.strip()[1:-1]  # минус внешние квадратные скобки
     elements = []
     cont = ""
@@ -38,10 +40,10 @@ def parse_array(value):
         if re.fullmatch(r'^".*"$', element):  # Строки
             parsed_value = element.strip('"')
             parsed_elements.append(parsed_value)
-            error = True
+            error_perechod = True
         elif element in {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}:  # Специальные значения
             parsed_elements.append(float(element.replace("+", "")))
-            error = True
+            error_perechod = True
         elif re.fullmatch(r"^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$", element):  # Числа (целые и с плавающей запятой)
             if '.' in element or 'e' in element.lower():  # Число с плавающей запятой
                 parsed_elements.append(float(element))
@@ -49,17 +51,18 @@ def parse_array(value):
                 parsed_elements.append(int(element))
         elif element in ["true", "false"]:  # Булевы значения
             parsed_elements.append(element == "true")
-            error = True
+            error_perechod = True
         elif re.fullmatch(r'^\[.*\]$', element):  # Вложенные массивы
             parsed_value = parse_array(element)
             parsed_elements.append(parsed_value)
         else:
             print(f"INVALID ELEMENT IN ARRAY: {element}")
             return None
-    return parsed_elements, error
+    return parsed_elements
 
 
 def parse(text):
+    global error_perechod
     date_time_sm = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|([+-])\d{2}:\d{2})$"
     date_time = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z?$"
     date = r"^\d{4}-\d{2}-\d{2}$"
@@ -73,7 +76,6 @@ def parse(text):
     parsed_data = {"Root": {}}  # Инициализируем с таблицей по умолчанию 'Root'
     current_table = parsed_data["Root"]  # По умолчанию используем таблицу 'Root'
     commentary_massiv = []
-    error_perechod = False
     defined_tables = set()
     for line in text:
         line = line.strip()
@@ -154,25 +156,21 @@ def parse(text):
             elif value in ["true", "false"]:
                 target[final_key] = value == "true"
                 error_perechod = True
-            elif re.fullmatch(date_time_sm, value) or re.fullmatch(date_time, value) or re.fullmatch(date,
-                                                                                                     value) or re.fullmatch(
-                    time, value):
+            elif re.fullmatch(date_time_sm, value) or re.fullmatch(date_time, value) or re.fullmatch(date, value) or re.fullmatch(time, value):
                 target[final_key] = value
                 error_perechod = True
             elif re.fullmatch(array_pattern, value):
-                if parse_array(value) is None:
+                parsed_array = parse_array(value)
+                if parsed_array is None:
                     return
-                parsed_array, error = parse_array(value)
                 target[final_key] = parsed_array
-                if error:
-                    error_perechod = error
             else:
                 print(f"INVALID VALUE FOR KEY '{name}'")
                 return
             continue
         print("INVALID LINE:", line)
         return
-    return parsed_data, commentary_massiv, error_perechod
+    return parsed_data, commentary_massiv
 
 
 def main(path_to_itog_file):
@@ -186,9 +184,9 @@ def main(path_to_itog_file):
     while not keyboard.is_pressed("ctrl+d"):
         time.sleep(0.1)
     if parse(text):
-        dict, commentaries, error = parse(text)
+        dict, commentaries  = parse(text)
         print("файл toml верный")
-        if error:
+        if error_perechod:
             print("ошибка записи, конвертирование невозможно")
             return
         write(path_to_itog_file, dict, commentaries)
@@ -201,7 +199,9 @@ def write(path_to_itog_file, text, commentaries):
             f.write(i.strip() + "\n")
         beautiful = str(pformat(text))
         f.write("#|\n")
-        f.write("var result := " + beautiful.replace(": ", " = ").replace("[", "(").replace("]", ")"))
+        f.write("{\n")
+        f.write(beautiful.replace(": ", " = ").replace("[", "(").replace("]", ")"))
+        f.write("\n}")
 
 
 if __name__ == "__main__":
