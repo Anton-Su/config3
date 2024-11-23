@@ -23,10 +23,47 @@ patterns = {
     }
 
 
-def read_input(text):
+def read_input(text: list):
     for line in sys.stdin:
-        if line.strip():
-            text.append(line.strip())
+        line = line.strip()
+        if line:
+            commentary = ''
+            index = 0
+            while line.find("#", index, len(line) - 1) != -1:  # кавычки и комментарии
+                kavishi_count = 0
+                if ((line.find("#", index, len(line) - 1) < line.find('"', index, len(line) - 1)
+                     or line.find('"', index, len(line) - 1) == -1) or (
+                            line.find("#", index, len(line) - 1) < line.find("'", index, len(line) - 1)
+                            or line.find("'", index, len(line) - 1) == -1)) and kavishi_count % 2 == 0:
+                    commentary = line[line.find("#", index, len(line) - 1) + 1:]
+                    line = line[:line.find("#", index, len(line) - 1)].strip()
+                    break
+                else:
+                    if line.find('"', index + 1, len(line) - 1) == -1 or line.find("'", index + 1, len(line) - 1):
+                        index = index + 1
+                    else:
+                        index = min(line.find("'", index + 1, len(line) - 1), line.find('"', index + 1, len(line) - 1))
+                        kavishi_count += 1
+            if commentary:
+                commentaries.append(commentary)
+            if line:
+                text.append(line)
+
+
+def read_input_after(text: list):
+    count_massiv = 0
+    count_slovar = 0
+    new_massiv = []
+    for i in range(len(text)):
+        count_massiv_2 = text[i].count("[") - text[i].count("[")
+        count_slovar_2 = text[i].count("{") - text[i].count("}")
+        if count_slovar == 0 and count_massiv == 0:  # свободная линия
+            new_massiv.append(text[i])
+        elif not(count_slovar == 0 and count_massiv == 0):
+            new_massiv[-1] += text[i]
+        count_massiv += count_massiv_2
+        count_slovar += count_slovar_2
+    return new_massiv
 
 
 def prepare(value):
@@ -137,7 +174,6 @@ def parse_dict(value, dict):
                 return
             massiv_var.append("var " + key + " := " + str(parsed_value))
             parsed_value = f'!"{key}"!'
-
         elif re.fullmatch(patterns["dictionary"], val):  # Вложенный словарь
             if not parse_dict(val, current_target.setdefault(final_key, {})):
                 return
@@ -154,31 +190,10 @@ def parse_dict(value, dict):
 
 
 def parse(lines):
+    lines = read_input_after(lines)
     dict = {"Root": {}}
     current_table = dict["Root"]
     for line in lines:
-        line = line.strip()
-        commentary = ''
-        index = 0
-        while line.find("#", index, len(line) - 1) != -1:  # кавычки и комментарии
-            kavishi_count = 0
-            if ((line.find("#", index, len(line) - 1) < line.find('"', index, len(line) - 1)
-                 or line.find('"', index, len(line) - 1) == -1) or (
-                        line.find("#", index, len(line) - 1) < line.find("'", index, len(line) - 1)
-                        or line.find("'", index, len(line) - 1) == -1)) and kavishi_count % 2 == 0:
-                commentary = line[line.find("#", index, len(line) - 1) + 1:]
-                line = line[:line.find("#", index, len(line) - 1)].strip()
-                break
-            else:
-                if line.find('"', index + 1, len(line) - 1) == -1 or line.find("'", index + 1, len(line) - 1):
-                    index = index + 1
-                else:
-                    index = min(line.find("'", index + 1, len(line) - 1), line.find('"', index + 1, len(line) - 1))
-                    kavishi_count += 1
-        if commentary:
-            commentaries.append(commentary)
-        if not line:
-            continue
         if re.fullmatch(patterns["table"], line):
             table_name = line.strip()[1:-1]
             result = point_key(dict, table_name)
@@ -228,7 +243,7 @@ def write_output(path, data):
             f.write("|#\n")
             for comment in commentaries:
                 f.write(comment + "\n")
-            f.write("#|\n")
+            f.write("#|\n\n")
         for var in massiv_var:
             f.write(var.replace(": ", " = ").replace("[", "(").replace("]", ")").replace("'", "").replace('!"', '![').replace('"!', ']') + "\n")
         if len(massiv_var) > 0:
