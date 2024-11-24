@@ -49,14 +49,17 @@ def read_input(text: list):
 
 def read_input_after(text: list):
     count_massiv = 0
+    count_slovar = 0
     new_massiv = []
     for i in range(len(text)):
         count_massiv_2 = text[i].count("[") - text[i].count("]")
-        if count_massiv == 0:  # свободная линия
+        count_slovar_2 = text[i].count("{") - text[i].count("}")
+        if count_slovar == 0 and count_massiv == 0:  # свободная линия
             new_massiv.append(text[i])
         else:
             new_massiv[-1] += text[i]
         count_massiv += count_massiv_2
+        count_slovar += count_slovar_2
     return new_massiv
 
 
