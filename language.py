@@ -152,20 +152,20 @@ def parse_array(value, dict):
             parsed_elements.append(element)
             error_perechod.append(f"{element} - date_time_error")
         elif re.fullmatch(patterns["array"], element):  # Вложенные массивы
-            result, finish = parse_array(element, dict)
-            if not finish:
+            result = parse_array(element, dict)
+            if result is None:
                 return
             parsed_elements.append(result)
         elif re.fullmatch(patterns["dictionary"], element):  # словарь, но в массиве нет разницы, повторялось ли что-то!
             novii = {}
-            parsed_value, finish = parse_dict(element, novii)
-            if not finish:
+            parsed_value = parse_dict(element, novii)
+            if parsed_value is None:
                 return
             parsed_elements.append(parsed_value)
         else:
             print(f'INVALID ELEMENT IN ARRAY: "{element}"')
             return
-    return parsed_elements, True
+    return parsed_elements
 
 
 def parse_dict(value, dict):
@@ -192,14 +192,13 @@ def parse_dict(value, dict):
             parsed_value = val
             error_perechod.append(f"{val} - date_time_error")
         elif re.fullmatch(patterns["array"], val):  # Массив
-            parsed_value, finish = parse_array(val, current_target)
-            if not finish:
+            parsed_value = parse_array(val, current_target)
+            if parsed_value is None:
                 return
             massiv_var.append("var " + final_key + " := " + str(parsed_value))
             parsed_value = f'!"{final_key}"!'
         elif re.fullmatch(patterns["dictionary"], val):  # Вложенный словарь
-            parsed_dict, finish = parse_dict(val, current_target.setdefault(final_key, {}))
-            if not finish:
+            if parse_dict(val, current_target.setdefault(final_key, {})) is None:
                 return
             continue
         else:
@@ -210,7 +209,7 @@ def parse_dict(value, dict):
         else:
             print(f'INVALID REDEFINITION OF TABLE "{final_key}"')
             return
-    return dict, True
+    return dict
 
 
 def parse(lines):
@@ -246,13 +245,12 @@ def parse(lines):
                 current_target[final_key] = value
                 error_perechod.append(f"{value} - date_time_error")
             elif re.fullmatch(patterns["array"], value):
-                parsed_array, finish = parse_array(value, current_target)
-                if not finish:
+                parsed_array = parse_array(value, current_target)
+                if parsed_array is None:
                     return
                 current_target[final_key] = parsed_array
             elif re.fullmatch(patterns["dictionary"], value):
-                parsed_dict, finish = parse_dict(value, current_target.setdefault(final_key, {}))
-                if not finish:
+                if parse_dict(value, current_target.setdefault(final_key, {})) is None:
                     return
             else:
                 print(f'INVALID VALUE FOR KEY "{key}"')
