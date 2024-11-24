@@ -52,11 +52,11 @@ def read_input_after(text: list):
     count_slovar = 0
     new_massiv = []
     for i in range(len(text)):
-        count_massiv_2 = text[i].count("[") - text[i].count("[")
+        count_massiv_2 = text[i].count("[") - text[i].count("]")
         count_slovar_2 = text[i].count("{") - text[i].count("}")
         if count_slovar == 0 and count_massiv == 0:  # свободная линия
             new_massiv.append(text[i])
-        elif not(count_slovar == 0 and count_massiv == 0):
+        else:
             new_massiv[-1] += text[i]
         count_massiv += count_massiv_2
         count_slovar += count_slovar_2
@@ -152,20 +152,20 @@ def parse_array(value, dict):
             parsed_elements.append(element)
             error_perechod.append(f"{element} - date_time_error")
         elif re.fullmatch(patterns["array"], element):  # Вложенные массивы
-            result = parse_array(element, dict)
-            if not result:
+            result, finish = parse_array(element, dict)
+            if not finish:
                 return
             parsed_elements.append(result)
         elif re.fullmatch(patterns["dictionary"], element):  # словарь, но в массиве нет разницы, повторялось ли что-то!
             novii = {}
-            parsed_value = parse_dict(element, novii)
-            if parsed_value is None:
+            parsed_value, finish = parse_dict(element, novii)
+            if not finish:
                 return
             parsed_elements.append(parsed_value)
         else:
             print(f'INVALID ELEMENT IN ARRAY: "{element}"')
             return
-    return parsed_elements
+    return parsed_elements, True
 
 
 def parse_dict(value, dict):
@@ -192,13 +192,14 @@ def parse_dict(value, dict):
             parsed_value = val
             error_perechod.append(f"{val} - date_time_error")
         elif re.fullmatch(patterns["array"], val):  # Массив
-            parsed_value = parse_array(val, current_target)
-            if parsed_value is None:
+            parsed_value, finish = parse_array(val, current_target)
+            if not finish:
                 return
             massiv_var.append("var " + final_key + " := " + str(parsed_value))
             parsed_value = f'!"{final_key}"!'
         elif re.fullmatch(patterns["dictionary"], val):  # Вложенный словарь
-            if not parse_dict(val, current_target.setdefault(final_key, {})):
+            parsed_dict, finish = parse_dict(val, current_target.setdefault(final_key, {}))
+            if not finish:
                 return
             continue
         else:
@@ -209,7 +210,7 @@ def parse_dict(value, dict):
         else:
             print(f'INVALID REDEFINITION OF TABLE "{final_key}"')
             return
-    return dict
+    return dict, True
 
 
 def parse(lines):
@@ -245,12 +246,13 @@ def parse(lines):
                 current_target[final_key] = value
                 error_perechod.append(f"{value} - date_time_error")
             elif re.fullmatch(patterns["array"], value):
-                parsed_array = parse_array(value, current_target)
-                if not parsed_array:
+                parsed_array, finish = parse_array(value, current_target)
+                if not finish:
                     return
                 current_target[final_key] = parsed_array
             elif re.fullmatch(patterns["dictionary"], value):
-                if not parse_dict(value, current_target.setdefault(final_key, {})):
+                parsed_dict, finish = parse_dict(value, current_target.setdefault(final_key, {}))
+                if not finish:
                     return
             else:
                 print(f'INVALID VALUE FOR KEY "{key}"')
@@ -258,6 +260,7 @@ def parse(lines):
             continue
         print(f'INVALID LINE: "{line}"')
         return
+    print(dict)
     return dict
 
 
