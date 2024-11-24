@@ -13,13 +13,13 @@ patterns = {
         "datetime": r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|([+-]\d{2}:\d{2}))?$",
         "date": r"^\d{4}-\d{2}-\d{2}$",
         "time": r"^\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z?$",
-        "digit": r"^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$",
+        "digit": r'^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$',
         "string": r'^".*"$',
         "array": r'^\[.*\]$',
         "table": r"^\s*\[[^\s\[\].]+(\s*\.\s*[^\s\[\].]+)*\]\s*$",
-        "key_value": r"^[\w\"'_-][\w\"'_.-]*\s*=\s*.+",
+        "key_value": r'^[a-zA-Z_"-][\w"_.-]*\s*=\s*.+$',
         "dictionary": r'^\{.*\}$',
-        "toml": r"[_A-Z][_a-zA-Z0-9]*",
+        "ucheb": r"[_A-Z][_a-zA-Z0-9]*",
     }
 
 
@@ -29,20 +29,17 @@ def read_input(text: list):
         if line:
             commentary = ''
             index = 0
-            while line.find("#", index, len(line) - 1) != -1:  # кавычки и комментарии
+            while line.find("#", index, len(line) - 1) != -1:  # Кавычки и комментарии
                 kavishi_count = 0
-                if ((line.find("#", index, len(line) - 1) < line.find('"', index, len(line) - 1)
-                     or line.find('"', index, len(line) - 1) == -1) or (
-                            line.find("#", index, len(line) - 1) < line.find("'", index, len(line) - 1)
-                            or line.find("'", index, len(line) - 1) == -1)) and kavishi_count % 2 == 0:
+                if (line.find("#", index, len(line) - 1) < line.find('"', index, len(line) - 1) or line.find('"', index, len(line) - 1) == -1) and kavishi_count % 2 == 0:
                     commentary = line[line.find("#", index, len(line) - 1) + 1:]
                     line = line[:line.find("#", index, len(line) - 1)].strip()
                     break
                 else:
-                    if line.find('"', index + 1, len(line) - 1) == -1 or line.find("'", index + 1, len(line) - 1):
+                    if line.find('"', index + 1, len(line) - 1) == -1:
                         index = index + 1
                     else:
-                        index = min(line.find("'", index + 1, len(line) - 1), line.find('"', index + 1, len(line) - 1))
+                        index = line.find('"', index + 1, len(line) - 1)
                         kavishi_count += 1
             if commentary:
                 commentaries.append(commentary)
@@ -94,16 +91,42 @@ def prepare(value):
     return elements
 
 
+def key_split(value):
+    elements = []
+    buffer = ""
+    kavishi_count = 0
+    for char in value:
+        if char == '"':
+            kavishi_count += 1
+        if char == "." and kavishi_count % 2 == 0:
+            elements.append(buffer.strip())
+            buffer = ""
+        else:
+            buffer += char
+    if buffer.strip():
+        elements.append(buffer.strip())
+    return elements
+
+
 def point_key(dict, table_name):
-    keys = table_name.split(".")
+    if table_name.count('""'):
+        print('"" Is not allowed')
+        return
+    keys = key_split(table_name)
     current_target = dict
     for k in keys[:-1]:
-        if not re.fullmatch(patterns["toml"], k):
-            error_perechod.append("Key is not TOML")
+        if not re.fullmatch(patterns["ucheb"], k):
+            error_perechod.append("Key is not ucheb")
+        if re.fullmatch(patterns["digit"], k):
+            print("KEY CAN NOT BE INT")
+            return
         current_target = current_target.setdefault(k, {})
     final_key = keys[-1]
-    if not re.fullmatch(patterns["toml"], final_key):
-        error_perechod.append("Key is not TOML")
+    if not re.fullmatch(patterns["ucheb"], final_key):
+        error_perechod.append("Key is not ucheb")
+    if re.fullmatch(patterns["digit"], final_key):
+        print('BARE KEY CAN NOT BE DIGIT, USE "" instead')
+        return
     if final_key in current_target:
         print(f"INVALID REDEFINITION OF KEY '{final_key}'")
         return
@@ -114,7 +137,6 @@ def parse_array(value, dict):
     elements = prepare(value)
     parsed_elements = []
     for element in elements:
-        element = element.strip()
         if re.fullmatch(patterns["string"], element):
             parsed_elements.append(element.strip('"'))
             error_perechod.append("Value_stroka_error")
@@ -134,8 +156,9 @@ def parse_array(value, dict):
             if not result:
                 return
             parsed_elements.append(result)
-        elif re.fullmatch(patterns["dictionary"], element):  # словарь
-            parsed_value = parse_dict(element, dict.setdefault(element, {}))
+        elif re.fullmatch(patterns["dictionary"], element):  # словарь, но в массиве нет разницы, повторялось ли что-то!
+            novii = {}
+            parsed_value = parse_dict(element, novii)
             if parsed_value is None:
                 return
             parsed_elements.append(parsed_value)
@@ -163,8 +186,8 @@ def parse_dict(value, dict):
             parsed_value = val == "true"
             error_perechod.append("Value_boolean_error")
         elif re.fullmatch(patterns["digit"], val):
-            parsed_value = f'!"{key}"!'
-            massiv_var.append("var " + key + " := " + str(float(val)) if '.' in val or 'e' in val.lower() else "var " + key + " := " + str(int(val)))
+            parsed_value = f'!"{final_key}"!'
+            massiv_var.append("var " + final_key + " := " + str(float(val)) if '.' in val or 'e' in val.lower() else "var " + final_key + " := " + str(int(val)))
         elif re.fullmatch(patterns["datetime"], element) or re.fullmatch(patterns["date"], element) or re.fullmatch(patterns["time"], element):
             parsed_value = element
             error_perechod.append("Value_date_time_error")
@@ -172,8 +195,8 @@ def parse_dict(value, dict):
             parsed_value = parse_array(val, current_target)
             if parsed_value is None:
                 return
-            massiv_var.append("var " + key + " := " + str(parsed_value))
-            parsed_value = f'!"{key}"!'
+            massiv_var.append("var " + final_key + " := " + str(parsed_value))
+            parsed_value = f'!"{final_key}"!'
         elif re.fullmatch(patterns["dictionary"], val):  # Вложенный словарь
             if not parse_dict(val, current_target.setdefault(final_key, {})):
                 return
