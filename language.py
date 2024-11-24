@@ -116,16 +116,16 @@ def point_key(dict, table_name):
     current_target = dict
     for k in keys[:-1]:
         if not re.fullmatch(patterns["ucheb"], k):
-            error_perechod.append(f"{k} is not ucheb")
+            error_perechod.append(f"{k} cannot convert to ucheb")
         if re.fullmatch(patterns["digit"], k):
             print(f"{k} CAN NOT BE INT")
             return
         current_target = current_target.setdefault(k, {})
     final_key = keys[-1]
     if not re.fullmatch(patterns["ucheb"], final_key):
-        error_perechod.append(f"{final_key} is not ucheb")
+        error_perechod.append(f"{final_key} cannot convert to ucheb")
     if re.fullmatch(patterns["digit"], final_key):
-        print(f'BARE KEY {final_key} CAN NOT BE DIGIT, USE "" instead')
+        print(f'BARE KEY SUCH AS {final_key} CAN NOT BE DIGIT, USE DIGITS WITH "" instead')
         return
     if final_key in current_target:
         print(f"INVALID REDEFINITION OF KEY '{final_key}'")
@@ -163,7 +163,7 @@ def parse_array(value, dict):
                 return
             parsed_elements.append(parsed_value)
         else:
-            print(f"INVALID ELEMENT IN ARRAY: {element}")
+            print(f'INVALID ELEMENT IN ARRAY: "{element}"')
             return
     return parsed_elements
 
@@ -202,12 +202,12 @@ def parse_dict(value, dict):
                 return
             continue
         else:
-            print(f"INVALID DICT VALUE: {val}")
+            print(f'INVALID DICT VALUE: "{val}"')
             return
         if final_key not in current_target:
             current_target[final_key] = parsed_value
         else:
-            print(f"INVALID REDEFINITION OF TABLE '{final_key}'")
+            print(f'INVALID REDEFINITION OF TABLE "{final_key}"')
             return
     return dict
 
@@ -253,10 +253,10 @@ def parse(lines):
                 if not parse_dict(value, current_target.setdefault(final_key, {})):
                     return
             else:
-                print(f"INVALID VALUE FOR KEY '{key}'")
+                print(f'INVALID VALUE FOR KEY "{key}"')
                 return
             continue
-        print(f"INVALID LINE: {line}")
+        print(f'INVALID LINE: "{line}"')
         return
     return dict
 
@@ -293,8 +293,9 @@ def main(path_to_itog_file):
         print("Файл TOML верный, перехожу к переводу в учебный язык->")
         if len(error_perechod) > 0:
             print(f"Возникли следующие ошибки при переводе из TOML в учебный язык:")
-            for i in range(len(list(dict.fromkeys(error_perechod)))):
-                print(f'{i + 1}) {list(dict.fromkeys(error_perechod))[i]}')
+            for i in range(len(list(dict.fromkeys(error_perechod))) - 1):
+                print(f'{i + 1}) {list(dict.fromkeys(error_perechod))[i]};')
+            print(f'{len(list(dict.fromkeys(error_perechod)))}) {list(dict.fromkeys(error_perechod))[-1]}.')
             print("Преобразование в учебный язык невозможно!")
             return
         write_output(path_to_itog_file, dict)
