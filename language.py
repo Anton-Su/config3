@@ -274,6 +274,21 @@ def parse(lines):
     return dict
 
 
+def format_json_with_single_line_arrays(obj, indent=4, level=0):
+    if isinstance(obj, dict):
+        items = []
+        for key, value in obj.items():
+            formatted_value = format_json_with_single_line_arrays(value, indent, level + 1)
+            items.append(f'{" " * (level * indent)}"{key}": {formatted_value}')
+        return "{\n" + ",\n".join(items) + f'\n{" " * ((level - 1) * indent)}}}'
+    elif isinstance(obj, list):  # Массивы остаются на одной строке
+        return "(" + ", ".join(format_json_with_single_line_arrays(item, indent, level + 1) for item in obj) + ")"
+    elif isinstance(obj, str):
+        return json.dumps(obj)
+    else:
+        return str(obj)
+
+
 def write_output(path, data):
     with open(path, mode="w", encoding="utf-16") as f:
         if len(commentaries) > 0:
@@ -285,7 +300,7 @@ def write_output(path, data):
             f.write(var.replace(": ", " = ").replace("[", "(").replace("]", ")").replace("'!", '![').replace("!'", ']').replace("'", "") + "\n")
         if len(massiv_var) > 0:
             f.write('\n')
-        formatted = json.dumps(data, indent=4).replace(": ", " = ").replace('"!', '![').replace('!"', ']').replace('"', "")
+        formatted = format_json_with_single_line_arrays(data, indent=4).replace(": ", " = ").replace('"!', '![').replace('!"', ']').replace('"', "")
         f.write(formatted)
 
 
