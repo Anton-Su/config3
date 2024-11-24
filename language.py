@@ -52,8 +52,21 @@ def read_input_after(text: list):
     count_slovar = 0
     new_massiv = []
     for i in range(len(text)):
-        count_massiv_2 = text[i].count("[") - text[i].count("]")
-        count_slovar_2 = text[i].count("{") - text[i].count("}")
+        kavishi, count_massiv_2, count_slovar_2 = 0, 0, 0
+        for symbol in text[i]:
+            if symbol == '"':
+                kavishi += 1
+            if symbol == '[' and kavishi % 2 == 0:
+                count_massiv_2 += 1
+            if symbol == ']' and kavishi % 2 == 0:
+                count_massiv_2 -= 1
+            if symbol == '{' and kavishi % 2 == 0:
+                count_slovar_2 += 1
+            if symbol == '}' and kavishi % 2 == 0:
+                count_slovar_2 -= 1
+        if count_slovar_2 != 0:
+            print("Cловарь в toml записывается в одну строчку!!!")
+            exit(0)
         if count_slovar == 0 and count_massiv == 0:  # свободная линия
             new_massiv.append(text[i])
         else:
