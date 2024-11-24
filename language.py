@@ -116,16 +116,16 @@ def point_key(dict, table_name):
     current_target = dict
     for k in keys[:-1]:
         if not re.fullmatch(patterns["ucheb"], k):
-            error_perechod.append("Key is not ucheb")
+            error_perechod.append(f"{k} is not ucheb")
         if re.fullmatch(patterns["digit"], k):
-            print("KEY CAN NOT BE INT")
+            print(f"{k} CAN NOT BE INT")
             return
         current_target = current_target.setdefault(k, {})
     final_key = keys[-1]
     if not re.fullmatch(patterns["ucheb"], final_key):
-        error_perechod.append("Key is not ucheb")
+        error_perechod.append(f"{final_key} is not ucheb")
     if re.fullmatch(patterns["digit"], final_key):
-        print('BARE KEY CAN NOT BE DIGIT, USE "" instead')
+        print(f'BARE KEY {final_key} CAN NOT BE DIGIT, USE "" instead')
         return
     if final_key in current_target:
         print(f"INVALID REDEFINITION OF KEY '{final_key}'")
@@ -139,18 +139,18 @@ def parse_array(value, dict):
     for element in elements:
         if re.fullmatch(patterns["string"], element):
             parsed_elements.append(element.strip('"'))
-            error_perechod.append("Value_stroka_error")
+            error_perechod.append(f"{element} - stroka_error")
         elif element in {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}:
             parsed_elements.append(float(element.replace("+", "")))
-            error_perechod.append("Value_special_elements_error")
+            error_perechod.append(f"{element} - special_elements_error")
         elif re.fullmatch(patterns["digit"], element):
             parsed_elements.append(float(element) if '.' in element or 'e' in element.lower() else int(element))
         elif element in ["true", "false"]:
             parsed_elements.append(element == "true")
-            error_perechod.append("Value_boolean_error")
+            error_perechod.append(f"{element} - boolean_error")
         elif re.fullmatch(patterns["datetime"], element) or re.fullmatch(patterns["date"], element) or re.fullmatch(patterns["time"], element):
             parsed_elements.append(element)
-            error_perechod.append("Value_date_time_error")
+            error_perechod.append(f"{element} - date_time_error")
         elif re.fullmatch(patterns["array"], element):  # Вложенные массивы
             result = parse_array(element, dict)
             if not result:
@@ -181,16 +181,16 @@ def parse_dict(value, dict):
         current_target, final_key = result[0], result[1]
         if re.fullmatch(patterns["string"], val):
             parsed_value = val.strip('"')
-            error_perechod.append("Value_stroka_error")
+            error_perechod.append(f"{val} - stroka_error")
         elif val in {"true", "false"}:
             parsed_value = val == "true"
-            error_perechod.append("Value_boolean_error")
+            error_perechod.append(f"{val} - boolean_error")
         elif re.fullmatch(patterns["digit"], val):
             parsed_value = f'!"{final_key}"!'
             massiv_var.append("var " + final_key + " := " + str(float(val)) if '.' in val or 'e' in val.lower() else "var " + final_key + " := " + str(int(val)))
-        elif re.fullmatch(patterns["datetime"], element) or re.fullmatch(patterns["date"], element) or re.fullmatch(patterns["time"], element):
-            parsed_value = element
-            error_perechod.append("Value_date_time_error")
+        elif re.fullmatch(patterns["datetime"], val) or re.fullmatch(patterns["date"], val) or re.fullmatch(patterns["time"], val):
+            parsed_value = val
+            error_perechod.append(f"{val} - date_time_error")
         elif re.fullmatch(patterns["array"], val):  # Массив
             parsed_value = parse_array(val, current_target)
             if parsed_value is None:
@@ -232,17 +232,18 @@ def parse(lines):
             current_target, final_key = result[0], result[1]
             if re.fullmatch(patterns["string"], value):
                 current_target[final_key] = value.strip('"')
-                error_perechod.append("Value_stroka_error")
+                error_perechod.append(f"{value} - stroka_error")
             elif value in {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}:
                 current_target[final_key] = float(value.replace("+", ""))
-                error_perechod.append("Value_inf_error")
+                error_perechod.append(f"{value} - inf_error")
             elif re.fullmatch(patterns["digit"], value):
                 current_target[final_key] = float(value) if '.' in value or 'e' in value.lower() else int(value)
             elif value in ["true", "false"]:
                 current_target[final_key] = value == "true"
+                error_perechod.append(f"{value} - boolean_error")
             elif re.fullmatch(patterns["datetime"], value) or re.fullmatch(patterns["date"], value) or re.fullmatch(patterns["time"], value):
                 current_target[final_key] = value
-                error_perechod.append("Value_date_time_error")
+                error_perechod.append(f"{value} - date_time_error")
             elif re.fullmatch(patterns["array"], value):
                 parsed_array = parse_array(value, current_target)
                 if not parsed_array:
@@ -294,7 +295,7 @@ def main(path_to_itog_file):
             print(f"Возникли следующие ошибки при переводе из TOML в учебный язык:")
             for i in range(len(list(dict.fromkeys(error_perechod)))):
                 print(f'{i + 1}) {list(dict.fromkeys(error_perechod))[i]}')
-            print("Преобразование в учебный язык невозможно")
+            print("Преобразование в учебный язык невозможно!")
             return
         write_output(path_to_itog_file, dict)
         print("Успешное преобразование!")
