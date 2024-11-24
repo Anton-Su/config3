@@ -3,8 +3,8 @@ import os
 import time
 import threading
 import re
-from pprint import pformat
 import keyboard
+import json
 
 commentaries = []
 error_perechod = []
@@ -186,7 +186,7 @@ def parse_dict(value, dict):
             parsed_value = val == "true"
             error_perechod.append(f"{val} - boolean_error")
         elif re.fullmatch(patterns["digit"], val):
-            parsed_value = f'!"{final_key}"!'
+            parsed_value = f'!{final_key}!'
             massiv_var.append("var " + final_key + " := " + str(float(val)) if '.' in val or 'e' in val.lower() else "var " + final_key + " := " + str(int(val)))
         elif re.fullmatch(patterns["datetime"], val) or re.fullmatch(patterns["date"], val) or re.fullmatch(patterns["time"], val):
             parsed_value = val
@@ -196,7 +196,7 @@ def parse_dict(value, dict):
             if parsed_value is None:
                 return
             massiv_var.append("var " + final_key + " := " + str(parsed_value))
-            parsed_value = f'!"{final_key}"!'
+            parsed_value = f'!{final_key}!'
         elif re.fullmatch(patterns["dictionary"], val):  # Вложенный словарь
             if parse_dict(val, current_target.setdefault(final_key, {})) is None:
                 return
@@ -214,15 +214,15 @@ def parse_dict(value, dict):
 
 def parse(lines):
     lines = read_input_after(lines)
-    dict = {"Root": {}}
-    current_table = dict["Root"]
+    dict = {}
+    current_table = dict
     for line in lines:
         if re.fullmatch(patterns["table"], line):
             table_name = line.strip()[1:-1]
             result = point_key(dict, table_name)
             if not result:
                 return
-            result[0][result[1]] = {}
+            current_table = result[0][result[1]] = {}
             continue
         if re.fullmatch(patterns["key_value"], line):
             key, value = map(str.strip, line.split("=", 1))
@@ -258,7 +258,6 @@ def parse(lines):
             continue
         print(f'INVALID LINE: "{line}"')
         return
-    print(dict)
     return dict
 
 
@@ -270,13 +269,11 @@ def write_output(path, data):
                 f.write(comment + "\n")
             f.write("#|\n\n")
         for var in massiv_var:
-            f.write(var.replace(": ", " = ").replace("[", "(").replace("]", ")").replace("'", "").replace('!"', '![').replace('"!', ']') + "\n")
+            f.write(var.replace(": ", " = ").replace("[", "(").replace("]", ")").replace("'!", '![').replace("!'", ']').replace("'", "") + "\n")
         if len(massiv_var) > 0:
             f.write('\n')
-        f.write("{\n")
-        formatted = pformat(data).replace(": ", " = ").replace("[", "(").replace("]", ")").replace("'", "").replace('!"', '![').replace('"!', ']')
+        formatted = json.dumps(data, indent=4).replace(": ", " = ").replace('"!', '![').replace('!"', ']').replace('"', "")
         f.write(formatted)
-        f.write("\n}")
 
 
 def main(path_to_itog_file):
@@ -290,7 +287,7 @@ def main(path_to_itog_file):
     while not keyboard.is_pressed("ctrl+d"):
         time.sleep(0.1)
     dict = parse(text)
-    if dict:
+    if dict is not None:
         print("Файл TOML верный, перехожу к переводу в учебный язык->")
         if len(error_perechod) > 0:
             print(f"Возникли следующие ошибки при переводе из TOML в учебный язык:")
