@@ -49,17 +49,14 @@ def read_input(text: list):
 
 def read_input_after(text: list):
     count_massiv = 0
-    count_slovar = 0
     new_massiv = []
     for i in range(len(text)):
         count_massiv_2 = text[i].count("[") - text[i].count("]")
-        count_slovar_2 = text[i].count("{") - text[i].count("}")
-        if count_slovar == 0 and count_massiv == 0:  # свободная линия
+        if count_massiv == 0:  # свободная линия
             new_massiv.append(text[i])
         else:
             new_massiv[-1] += text[i]
         count_massiv += count_massiv_2
-        count_slovar += count_slovar_2
     return new_massiv
 
 
@@ -291,9 +288,9 @@ def main(path_to_itog_file):
         print("Файл TOML верный, перехожу к переводу в учебный язык->")
         if len(error_perechod) > 0:
             print(f"Возникли следующие ошибки при переводе из TOML в учебный язык:")
-            for i in range(len(list(dict.fromkeys(error_perechod))) - 1):
-                print(f'{i + 1}) {list(dict.fromkeys(error_perechod))[i]};')
-            print(f'{len(list(dict.fromkeys(error_perechod)))}) {list(dict.fromkeys(error_perechod))[-1]}.')
+            for i in range(len(list(error_perechod)) - 1):
+                print(f'{i + 1}) {error_perechod[i]};')
+            print(f'{len(error_perechod)}) {error_perechod[-1]}.')
             print("Преобразование в учебный язык невозможно!")
             return
         write_output(path_to_itog_file, dict)
